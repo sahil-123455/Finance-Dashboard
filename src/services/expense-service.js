@@ -1,69 +1,114 @@
-/**
- * it handles all the data operations.. like reading and writing from the local storage!!
- */
+const STORAGE_KEY = 'financeDashboardData';
 
-// this is the key which we will use to store data and retrive data in the browser local storage..
-const STORAGE_KEY = 'expenseTrackerData';
-
-/**
- * all the expenses will be retrived from the local storage,it will also load the saved data
-  @returns {Array<Object>} the list of expenses are sorted so the newest one will be first.
- */
-export const getExpenses = () => {
-    try {
-        const data = localStorage.getItem(STORAGE_KEY);
-        const expenses = data ? JSON.parse(data) : [];
-        
-        // this will sort the expenses so the newest one  will appear at top of the list.
-        return expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
-        
-    } catch (error) {
-        console.error("Oops! There was an error reading from Local Storage:", error);
-        return [];
-    }
+// Safely read from localStorage
+const readStorage = () => {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (!data) return [];
+    const parsed = JSON.parse(data);
+    if (!Array.isArray(parsed)) return [];
+    // Validate each item has required fields
+    return parsed.filter(
+      tx => tx && typeof tx.amount === 'number' && tx.id && tx.date && tx.type
+    );
+  } catch {
+    console.error('Corrupted localStorage data — resetting.');
+    localStorage.removeItem(STORAGE_KEY);
+    return [];
+  }
 };
 
-/**
- *  this will save the current list of expenses back to the local storage.
- */
-const saveExpenses = (expenses) => {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(expenses));
-    } catch (error) {
-        console.error("Oops! There was an error writing to Local Storage:", error);
-    }
+const writeStorage = (transactions) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  } catch (e) {
+    console.error('Failed to write to localStorage:', e);
+  }
 };
 
-/**
- * this will add a new expense item and save the updated list.
- * @returns {Array<Object>} the updated list of expenses.
- */
-export const addExpense = (newExpense) => {
-    const expenses = getExpenses();
-    const expenseWithId = {
-        ...newExpense,
-        id: Date.now(), // this will create a simple unique ID using the current time
-
-        //this will make sure the amount is saved as a number 
-        amount: parseFloat(newExpense.amount) 
-    };
-
-    expenses.unshift(expenseWithId); // this will put  the new expense at the start of the list.
-    saveExpenses(expenses);
-    return expenses;
+export const getTransactions = () => {
+  return readStorage().sort((a, b) => new Date(b.date) - new Date(a.date));
 };
 
-/**
- * here this will delete the expense item by its unique ID and willl save the updated list
- * @param {number} id - this will get the  ID of the expense to be deleted.
- * @returns {Array<Object>} this will return the  updated list of expenses.
- */
-export const deleteExpense = (id) => {
-    const expenses = getExpenses();
-    
-    // here we filter out the expense that will match the given ID.
-    const updatedExpenses = expenses.filter(expense => expense.id !== id);
-    
-    saveExpenses(updatedExpenses);
-    return updatedExpenses;
+export const addTransaction = (newTx) => {
+  const transactions = getTransactions();
+  const tx = {
+    ...newTx,
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    amount: Math.abs(parseFloat(newTx.amount)) || 0,
+    type: newTx.type || 'expense',
+    category: newTx.category || 'Other',
+    description: newTx.description || '',
+    date: newTx.date || new Date().toISOString().split('T')[0],
+  };
+  transactions.unshift(tx);
+  writeStorage(transactions);
+  return transactions;
+};
+
+export const updateTransaction = (id, updatedData) => {
+  const transactions = getTransactions();
+  const index = transactions.findIndex(tx => tx.id === id);
+  if (index === -1) return transactions;
+  transactions[index] = {
+    ...transactions[index],
+    ...updatedData,
+    amount: Math.abs(parseFloat(updatedData.amount ?? transactions[index].amount)) || 0,
+    id, // prevent id overwrite
+  };
+  writeStorage(transactions);
+  return transactions;
+};
+
+export const deleteTransaction = (id) => {
+  const transactions = getTransactions().filter(tx => tx.id !== id);
+  writeStorage(transactions);
+  return transactions;
+};
+
+export const exportToCSV = (transactions) => {
+  if (!transactions.length) return;
+  const headers = ['Date', 'Type', 'Category', 'Amount', 'Description'];
+  const rows = transactions.map(tx => [
+    tx.date,
+    tx.type,
+    tx.category,
+    tx.amount.toFixed(2),
+    `"${(tx.description || '').replace(/"/g, '""')}"`,
+  ]);
+  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `finance-data-${new Date().toISOString().split('T')[0]}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
+// Migrate old data format if present
+export const migrateOldData = () => {
+  try {
+    const oldData = localStorage.getItem('expenseTrackerData');
+    if (!oldData) return;
+    const oldExpenses = JSON.parse(oldData);
+    if (!Array.isArray(oldExpenses) || oldExpenses.length === 0) return;
+
+    const existing = readStorage();
+    if (existing.length > 0) return; // don't overwrite new data
+
+    const migrated = oldExpenses.map(exp => ({
+      id: `${exp.id || Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      amount: Math.abs(parseFloat(exp.amount)) || 0,
+      type: 'expense',
+      category: exp.category || 'Other',
+      description: exp.summary || '',
+      date: exp.date || new Date().toISOString().split('T')[0],
+    }));
+
+    writeStorage(migrated);
+    localStorage.removeItem('expenseTrackerData');
+  } catch {
+    // Silent migration failure
+  }
 };

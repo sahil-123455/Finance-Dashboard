@@ -1,5 +1,70 @@
 @import "tailwindcss";
-/* src/index.css */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+
+/* ---- Dark mode: class-based (Tailwind v4 requires @custom-variant) ---- */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---- Base Styles ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---- Scrollbar Styling ---- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #374151;
+}
+
+/* ---- Hide number input spinners ---- */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* ---- Skeleton pulse animation ---- */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ---- Focus Ring Utility ---- */
+*:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
