@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'financeDashboardData';
+const STORAGE_KEY = 'financeDashboardData_v2';
 
 const SEED_DATA = [
   { id: 'seed-1',  description: 'Monthly Salary',     amount: 75000, type: 'income',  category: 'Salary',         date: '2026-03-01' },
