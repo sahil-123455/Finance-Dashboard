@@ -36,20 +36,20 @@ const TrendChart = () => {
 
   if (isLoading) {
     return (
-      <div className="rounded-2xl p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 animate-pulse">
+      <div className="rounded-2xl p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 h-full flex flex-col animate-pulse">
         <div className="h-5 w-40 bg-gray-200 dark:bg-gray-700 rounded mb-4" />
-        <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-xl" />
+        <div className="flex-1 min-h-64 bg-gray-100 dark:bg-gray-800 rounded-xl" />
       </div>
     );
   }
 
   if (!data.length) {
     return (
-      <div className="rounded-2xl p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+      <div className="rounded-2xl p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 h-full flex flex-col">
         <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
           Monthly Trends
         </h3>
-        <div className="h-64 flex flex-col items-center justify-center text-gray-400 dark:text-gray-600">
+        <div className="flex-1 min-h-64 flex flex-col items-center justify-center text-gray-400 dark:text-gray-600">
           <svg className="w-12 h-12 mb-2 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 13l4-4 4 4 4-8 4 4" />
           </svg>
@@ -77,11 +77,11 @@ const TrendChart = () => {
   const axisColor = isDarkMode ? '#6b7280' : '#9ca3af';
 
   return (
-    <div className="rounded-2xl p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+    <div className="rounded-2xl p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 h-full flex flex-col">
       <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
         Monthly Trends
       </h3>
-      <div className="h-64">
+      <div className="flex-1 min-h-64">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
             <defs>

@@ -44,7 +44,6 @@ const TransactionForm = ({ compact = false }) => {
 
     setForm(prev => {
       const updated = { ...prev, [name]: value };
-      // Reset category when type changes
       if (name === 'type') updated.category = '';
       return updated;
     });
@@ -91,14 +90,16 @@ const TransactionForm = ({ compact = false }) => {
 
       {/* Amount */}
       <div>
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Amount (₹)</label>
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          Amount (₹) <span className="text-red-500">*</span>
+        </label>
         <input
           type="text"
           inputMode="decimal"
           name="amount"
           value={form.amount}
           onChange={handleChange}
-          className={inputCls}
+          className={`${inputCls} ${errors.amount ? 'border-red-400 dark:border-red-500 focus:ring-red-400/40' : ''}`}
           placeholder="0.00"
         />
         {errors.amount && <p className="text-xs text-red-500 mt-1">{errors.amount}</p>}
@@ -106,8 +107,15 @@ const TransactionForm = ({ compact = false }) => {
 
       {/* Category */}
       <div>
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Category</label>
-        <select name="category" value={form.category} onChange={handleChange} className={inputCls}>
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          Category <span className="text-red-500">*</span>
+        </label>
+        <select
+          name="category"
+          value={form.category}
+          onChange={handleChange}
+          className={`${inputCls} ${errors.category ? 'border-red-400 dark:border-red-500 focus:ring-red-400/40' : ''}`}
+        >
           <option value="">Select category</option>
           {categories.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
@@ -116,14 +124,25 @@ const TransactionForm = ({ compact = false }) => {
 
       {/* Date */}
       <div>
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Date</label>
-        <input type="date" name="date" value={form.date} onChange={handleChange} max={todayISO} className={inputCls} />
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          Date <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="date"
+          name="date"
+          value={form.date}
+          onChange={handleChange}
+          max={todayISO}
+          className={`${inputCls} ${errors.date ? 'border-red-400 dark:border-red-500 focus:ring-red-400/40' : ''}`}
+        />
         {errors.date && <p className="text-xs text-red-500 mt-1">{errors.date}</p>}
       </div>
 
       {/* Description */}
       <div>
-        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Description (optional)</label>
+        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          Description (optional)
+        </label>
         <input
           type="text"
           name="description"
@@ -207,9 +226,9 @@ const TransactionForm = ({ compact = false }) => {
     );
   }
 
-  // Inline mode: rendered in-page
+  // Inline mode
   return (
-    <div className="rounded-2xl p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+    <div className="rounded-2xl p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 h-full">
       <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
         New Transaction
       </h3>

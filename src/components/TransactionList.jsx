@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, SlidersHorizontal, Download, Trash2, Pencil, X, Check,
-  ArrowUpDown, ChevronDown,
+  ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useFinance } from '../context/FinanceContext';
 import { ALL_CATEGORIES, SORT_OPTIONS, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../utils/constants';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { exportToCSV } from '../services/expense-service';
 
-const TransactionList = () => {
+const PAGE_SIZE = 5;
+
+const TransactionList = ({ previewMode = false }) => {
   const {
     filteredTransactions, filters, updateFilter, resetFilters,
     handleDeleteTransaction, handleUpdateTransaction,
@@ -20,6 +22,17 @@ const TransactionList = () => {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, filteredTransactions.length]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / PAGE_SIZE));
+  const paginatedTransactions = previewMode
+    ? filteredTransactions.slice(0, 5)
+    : filteredTransactions.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const startEdit = (tx) => {
     if (!isAdmin) return;
@@ -47,7 +60,6 @@ const TransactionList = () => {
 
   const hasActiveFilters = filters.search || filters.type !== 'all' || filters.category !== 'All';
 
-  // Loading skeleton
   if (isLoading) {
     return (
       <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 overflow-hidden">
@@ -62,146 +74,145 @@ const TransactionList = () => {
 
   return (
     <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 overflow-hidden">
+
       {/* Header + Search + Actions */}
-      <div className="p-4 sm:p-5 border-b border-gray-100 dark:border-gray-800">
-        {/* Row 1: title + controls (wrap on small screens) */}
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="mr-auto text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-            Transactions
-            <span className="ml-2 text-xs font-normal normal-case text-gray-400">
-              ({filteredTransactions.length}{hasActiveFilters ? ` of ${transactions.length}` : ''})
-            </span>
-          </h3>
+      {!previewMode && (
+        <div className="p-4 sm:p-5 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="mr-auto text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+              Transactions
+              <span className="ml-2 text-xs font-normal normal-case text-gray-400">
+                ({filteredTransactions.length}{hasActiveFilters ? ` of ${transactions.length}` : ''})
+              </span>
+            </h3>
 
-          {/* Search */}
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={filters.search}
-              onChange={(e) => updateFilter('search', e.target.value)}
-              placeholder="Search..."
-              className="w-36 sm:w-44 pl-8 pr-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700
-                bg-gray-50 dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-200
-                focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500
-                focus:w-52 transition-all duration-300 placeholder-gray-400"
-            />
+            {/* Search */}
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={filters.search}
+                onChange={(e) => updateFilter('search', e.target.value)}
+                placeholder="Search..."
+                className="w-36 sm:w-44 pl-8 pr-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700
+                  bg-gray-50 dark:bg-gray-800 text-sm text-gray-800 dark:text-gray-200
+                  focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500
+                  focus:w-52 transition-all duration-300 placeholder-gray-400"
+              />
+            </div>
+
+            {/* Filter toggle */}
+            <motion.button
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              onClick={() => setShowFilters(!showFilters)}
+              className={`relative p-2 rounded-xl border transition-colors duration-200 ${showFilters
+                ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400'
+                : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+              title="Filters"
+            >
+              <SlidersHorizontal size={16} />
+              {hasActiveFilters && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500" />
+              )}
+            </motion.button>
+
+            {/* Sort */}
+            <div className="relative">
+              <select
+                value={filters.sortBy}
+                onChange={e => updateFilter('sortBy', e.target.value)}
+                className="appearance-none pl-7 pr-6 py-2 rounded-xl border border-gray-200 dark:border-gray-700
+                  bg-gray-50 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300
+                  focus:outline-none focus:ring-2 focus:ring-emerald-500/40 cursor-pointer max-w-[130px]"
+              >
+                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <ArrowUpDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <ChevronDown size={12} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            </div>
+
+            {/* Export */}
+            <motion.button
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              onClick={() => exportToCSV(filteredTransactions)}
+              disabled={!filteredTransactions.length}
+              className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800
+                transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Export CSV"
+            >
+              <Download size={16} />
+            </motion.button>
           </div>
 
-          {/* Filter toggle with active dot */}
-          <motion.button
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.92 }}
-            onClick={() => setShowFilters(!showFilters)}
-            className={`relative p-2 rounded-xl border transition-colors duration-200 ${showFilters
-              ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400'
-              : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-            title="Filters"
-          >
-            <SlidersHorizontal size={16} />
-            {hasActiveFilters && (
-              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500" />
-            )}
-          </motion.button>
+          {/* Filter bar */}
+          <AnimatePresence>
+            {showFilters && (
+              <motion.div
+                initial={{ height: 0, opacity: 0, y: -8 }}
+                animate={{ height: 'auto', opacity: 1, y: 0 }}
+                exit={{ height: 0, opacity: 0, y: -8 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+                className="overflow-hidden"
+              >
+                <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                  <div className="flex rounded-xl bg-gray-100 dark:bg-gray-800 p-0.5">
+                    {['all', 'income', 'expense'].map((t) => (
+                      <motion.button
+                        key={t}
+                        whileTap={{ scale: 0.93 }}
+                        onClick={() => updateFilter('type', t)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 capitalize
+                          ${filters.type === t
+                            ? t === 'income'
+                              ? 'bg-emerald-500 text-white shadow-sm'
+                              : t === 'expense'
+                                ? 'bg-rose-500 text-white shadow-sm'
+                                : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                      >
+                        {t}
+                      </motion.button>
+                    ))}
+                  </div>
 
-          {/* Sort */}
-          <div className="relative">
-            <select
-              value={filters.sortBy}
-              onChange={e => updateFilter('sortBy', e.target.value)}
-              className="appearance-none pl-7 pr-6 py-2 rounded-xl border border-gray-200 dark:border-gray-700
-                bg-gray-50 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300
-                focus:outline-none focus:ring-2 focus:ring-emerald-500/40 cursor-pointer max-w-[130px]"
-            >
-              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-            <ArrowUpDown size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <ChevronDown size={12} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-          </div>
-
-          {/* Export */}
-          <motion.button
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.92 }}
-            onClick={() => exportToCSV(filteredTransactions)}
-            disabled={!filteredTransactions.length}
-            className="p-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800
-              transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Export CSV"
-          >
-            <Download size={16} />
-          </motion.button>
-        </div>
-
-        {/* Filter bar */}
-        <AnimatePresence>
-          {showFilters && (
-            <motion.div
-              initial={{ height: 0, opacity: 0, y: -8 }}
-              animate={{ height: 'auto', opacity: 1, y: 0 }}
-              exit={{ height: 0, opacity: 0, y: -8 }}
-              transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="overflow-hidden"
-            >
-              <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
-                {/* Type filter pills */}
-                <div className="flex rounded-xl bg-gray-100 dark:bg-gray-800 p-0.5">
-                  {['all', 'income', 'expense'].map((t, i) => (
-                    <motion.button
-                      key={t}
-                      whileTap={{ scale: 0.93 }}
-                      onClick={() => updateFilter('type', t)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 capitalize
-                        ${filters.type === t
-                          ? t === 'income'
-                            ? 'bg-emerald-500 text-white shadow-sm'
-                            : t === 'expense'
-                              ? 'bg-rose-500 text-white shadow-sm'
-                              : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm'
-                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                    >
-                      {t}
-                    </motion.button>
-                  ))}
-                </div>
-
-                {/* Category filter */}
-                <select
-                  value={filters.category}
-                  onChange={e => updateFilter('category', e.target.value)}
-                  className="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 max-w-[150px]"
-                >
-                  <option value="All">All Categories</option>
-                  <optgroup label="Expense">
-                    {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </optgroup>
-                  <optgroup label="Income">
-                    {INCOME_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </optgroup>
-                </select>
-
-                {hasActiveFilters && (
-                  <motion.button
-                    initial={{ opacity: 0, x: -6 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -6 }}
-                    onClick={resetFilters}
-                    className="flex items-center gap-1 text-xs text-rose-500 dark:text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 font-medium transition-colors"
+                  <select
+                    value={filters.category}
+                    onChange={e => updateFilter('category', e.target.value)}
+                    className="px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 max-w-[150px]"
                   >
-                    <X size={12} /> Clear all
-                  </motion.button>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+                    <option value="All">All Categories</option>
+                    <optgroup label="Expense">
+                      {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </optgroup>
+                    <optgroup label="Income">
+                      {INCOME_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </optgroup>
+                  </select>
+
+                  {hasActiveFilters && (
+                    <motion.button
+                      initial={{ opacity: 0, x: -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      onClick={resetFilters}
+                      className="flex items-center gap-1 text-xs text-rose-500 dark:text-rose-400 hover:text-rose-600 font-medium transition-colors"
+                    >
+                      <X size={12} /> Clear all
+                    </motion.button>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* Transaction rows */}
       <div className="divide-y divide-gray-50 dark:divide-gray-800/50">
         <AnimatePresence mode="popLayout">
-          {filteredTransactions.length > 0 ? (
-            filteredTransactions.map((tx) => {
+          {paginatedTransactions.length > 0 ? (
+            paginatedTransactions.map((tx) => {
               const isEditing = editingId === tx.id;
               const isConfirmingDelete = deleteConfirmId === tx.id;
               const isIncome = tx.type === 'income';
@@ -264,10 +275,7 @@ const TransactionList = () => {
                   className="group px-4 sm:px-5 py-3 hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition-colors duration-150"
                 >
                   <div className="flex items-center gap-3 sm:gap-4">
-                    {/* Type indicator */}
                     <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isIncome ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-
-                    {/* Main info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
@@ -282,19 +290,13 @@ const TransactionList = () => {
                       </div>
                       <p className="text-xs text-gray-400 dark:text-gray-500">
                         {formatDate(tx.date)}
-                        <span className="sm:hidden ml-2 text-[10px] font-medium">
-                          {tx.category}
-                        </span>
+                        <span className="sm:hidden ml-2 text-[10px] font-medium">{tx.category}</span>
                       </p>
                     </div>
-
-                    {/* Amount */}
                     <span className={`text-sm font-semibold whitespace-nowrap
                       ${isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                       {isIncome ? '+' : '−'} {formatCurrency(tx.amount)}
                     </span>
-
-                    {/* Actions (admin only) */}
                     {isAdmin && (
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <button
@@ -306,27 +308,15 @@ const TransactionList = () => {
                         </button>
                         {isConfirmingDelete ? (
                           <div className="flex items-center gap-0.5">
-                            <button
-                              onClick={() => confirmDelete(tx.id)}
-                              className="p-1.5 rounded-lg text-white bg-red-500 hover:bg-red-600 transition-colors"
-                              title="Confirm delete"
-                            >
+                            <button onClick={() => confirmDelete(tx.id)} className="p-1.5 rounded-lg text-white bg-red-500 hover:bg-red-600 transition-colors" title="Confirm delete">
                               <Check size={14} />
                             </button>
-                            <button
-                              onClick={() => setDeleteConfirmId(null)}
-                              className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                              title="Cancel"
-                            >
+                            <button onClick={() => setDeleteConfirmId(null)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Cancel">
                               <X size={14} />
                             </button>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => setDeleteConfirmId(tx.id)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                            title="Delete"
-                          >
+                          <button onClick={() => setDeleteConfirmId(tx.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Delete">
                             <Trash2 size={14} />
                           </button>
                         )}
@@ -362,6 +352,67 @@ const TransactionList = () => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Pagination — only show when not in previewMode and more than 1 page */}
+      {!previewMode && totalPages > 1 && (
+        <div className="px-4 sm:px-5 py-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            Showing {Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredTransactions.length)}–{Math.min(currentPage * PAGE_SIZE, filteredTransactions.length)} of {filteredTransactions.length}
+          </p>
+          <div className="flex items-center gap-1">
+            {/* Prev */}
+            <motion.button
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400
+                hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft size={15} />
+            </motion.button>
+
+            {/* Page numbers */}
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+              .reduce((acc, p, idx, arr) => {
+                if (idx > 0 && p - arr[idx - 1] > 1) acc.push('...');
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((item, idx) =>
+                item === '...' ? (
+                  <span key={`dot-${idx}`} className="px-1 text-xs text-gray-400">…</span>
+                ) : (
+                  <motion.button
+                    key={item}
+                    whileHover={{ scale: 1.08 }}
+                    whileTap={{ scale: 0.92 }}
+                    onClick={() => setCurrentPage(item)}
+                    className={`min-w-[30px] h-[30px] rounded-lg text-xs font-medium transition-colors
+                      ${currentPage === item
+                        ? 'bg-emerald-500 text-white'
+                        : 'border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                  >
+                    {item}
+                  </motion.button>
+                )
+              )}
+
+            {/* Next */}
+            <motion.button
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400
+                hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight size={15} />
+            </motion.button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
