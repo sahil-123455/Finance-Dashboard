@@ -40,11 +40,13 @@ const InsightsPanel = () => {
     const expenses = transactions.filter(t => t.type === 'expense');
     const incomes = transactions.filter(t => t.type === 'income');
 
+    // Highest spending category
     const catEntries = Object.entries(summary.categoryTotals);
     const topCategory = catEntries.length
       ? catEntries.reduce((a, b) => (a[1] > b[1] ? a : b))
       : null;
 
+    // Monthly data
     const monthlyData = {};
     transactions.forEach(tx => {
       const d = new Date(tx.date);
@@ -65,12 +67,15 @@ const InsightsPanel = () => {
       ? ((currentExpense - previousExpense) / previousExpense * 100).toFixed(1)
       : null;
 
+    // Average transaction
     const avgExpense = expenses.length ? summary.totalExpenses / expenses.length : 0;
 
+    // Savings rate
     const savingsRate = summary.totalIncome > 0
       ? ((summary.totalIncome - summary.totalExpenses) / summary.totalIncome * 100).toFixed(1)
       : 0;
 
+    // Smart observations
     const observations = [];
 
     if (spendingChange !== null) {
@@ -111,6 +116,7 @@ const InsightsPanel = () => {
       });
     }
 
+    // Bar chart data for monthly comparison
     const barData = sortedMonths.slice(-6).map(key => {
       const [y, m] = key.split('-');
       return {
@@ -235,30 +241,17 @@ const InsightsPanel = () => {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="rounded-2xl p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 overflow-hidden"
+          className="rounded-2xl p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800"
         >
           <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
             Monthly Comparison
           </h3>
-          <div className="h-64 w-full overflow-hidden">
+          <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={insights.barData}
-                margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
-              >
+              <BarChart data={insights.barData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 10, fill: axisColor }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 10, fill: axisColor }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={45}
-                />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: axisColor }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: axisColor }} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="Income" fill="#10b981" radius={[4, 4, 0, 0]} animationDuration={800} />
                 <Bar dataKey="Expenses" fill="#f43f5e" radius={[4, 4, 0, 0]} animationDuration={800} />
